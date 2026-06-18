@@ -1,0 +1,41 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+.env/
+
+# Databases
+db.sqlite3
+*.db
+*.sqlite3
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor and IDE configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Scratch files and temporary scripts
+scratch/
+mks_setup.sh.bak
+sources.list.bak
+
+# OS specific files
+.DS_Store
+Thumbs.db

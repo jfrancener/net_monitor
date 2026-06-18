@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: always
+    # Mapeamento de volumes locais persistentes
+    volumes:
+      - ./adguard/workdir:/opt/adguardhome/work
+      - ./adguard/confdir:/opt/adguardhome/conf
+    # Portas necessárias para o DNS Resolver e interface administrativa
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
+      - "3000:3000/tcp"
+      # Descomente se for usar criptografia DNS
+      # - "443:443/tcp"
+      # - "853:853/tcp"
+      # - "853:853/udp"

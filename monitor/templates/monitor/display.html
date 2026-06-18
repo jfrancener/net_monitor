@@ -1,0 +1,386 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MKS NetMonitor</title>
+    <!-- Fonte Premium -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'monitor/css/display.css' %}">
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="brand">MKS Network Monitor</div>
+        <div class="sys-info">
+            <div class="sys-item">CPU: <span id="cpu_temp">{{ cpu_temp }}</span>°C</div>
+            <div class="sys-item">RAM: <span id="ram_usage">{{ ram_usage }}</span>%</div>
+            <div class="sys-item" id="clock">00:00:00</div>
+        </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+        
+        <!-- Coluna Esquerda: WAN, Speedtest e Redes Wi-Fi -->
+        <div class="wan-col">
+            <!-- Link Internet (WAN Status + Speedtest Combinados) -->
+            <div class="card wan-card combined-wan-card">
+                <div class="card-title">
+                    <span>Link Internet</span>
+                </div>
+                
+                <!-- Parte Superior: Status e Consumo em Tempo Real -->
+                <div class="wan-realtime-section">
+                    <div class="wan-status-wrapper">
+                        <div id="wan_dot" class="status-dot {% if wan and wan.wan_online %}online{% endif %}"></div>
+                        <div>
+                            <div id="wan_label" class="wan-label">{% if wan and wan.wan_online %}ONLINE{% else %}OFFLINE{% endif %}</div>
+                            <div class="wan-latency">lat.: <span id="wan_latency">{% if wan and wan.wan_online %}{{ wan.latency_wan_ms|floatformat:1 }}{% else %}0.0{% endif %}</span> ms</div>
+                        </div>
+                    </div>
+                    
+                    <div class="wan-bandwidth-wrapper">
+                        <div class="bw-item">
+                            <span id="wan_rx_rate" class="bw-num dl">{% if wan and wan.wan_online %}{{ wan.download_rate_mbps|floatformat:1 }}{% else %}0.0{% endif %}</span><span class="bw-unit">Mb</span>
+                            <span class="bw-label">Down</span>
+                        </div>
+                        <div class="bw-item">
+                            <span id="wan_tx_rate" class="bw-num ul">{% if wan and wan.wan_online %}{{ wan.upload_rate_mbps|floatformat:1 }}{% else %}0.0{% endif %}</span><span class="bw-unit">Mb</span>
+                            <span class="bw-label">Up</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divisor interno -->
+                <div class="card-divider"></div>
+
+                <!-- Parte Inferior: Speedtest -->
+                <div class="wan-speedtest-section">
+                    <div class="speedtest-header">
+                        <span class="speedtest-title">Speedtest</span>
+                        <span id="speed_time" class="speedtest-time">{% if latest_speedtest %}{{ latest_speedtest.timestamp|date:"H:i" }}{% else %}--:--{% endif %}</span>
+                    </div>
+                    
+                    <div class="speed-values">
+                        <div class="speed-val">
+                            <div class="speed-num dl"><span id="speed_dl">{% if latest_speedtest %}{{ latest_speedtest.download_mbps|floatformat:1 }}{% else %}0.0{% endif %}</span><span class="speed-unit">Mb</span></div>
+                            <span class="speed-label">Down</span>
+                        </div>
+                        <div class="speed-val">
+                            <div class="speed-num ul"><span id="speed_ul">{% if latest_speedtest %}{{ latest_speedtest.upload_mbps|floatformat:1 }}{% else %}0.0{% endif %}</span><span class="speed-unit">Mb</span></div>
+                            <span class="speed-label">Up</span>
+                        </div>
+                        <button id="btn_st" class="btn-speedtest {% if is_speedtesting %}running{% endif %}" onclick="triggerSpeedtest()">
+                            {% if is_speedtesting %}MEDINDO...{% else %}TESTE{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Redes Wi-Fi -->
+            <div class="card wifi-card" style="flex-grow: 1;">
+                <div class="card-title">Redes Wi-Fi</div>
+                <div class="ap-list" id="wifi_container" style="justify-content: space-around; gap: 2px;">
+                    {% if not omada_cfg or not omada_cfg.enabled %}
+                        <div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Integração Omada desativada</div>
+                    {% elif not omada_cfg.is_connected %}
+                        <div class="error-msg" style="font-size: 8px; color: #f87171; text-align: center; width: 100%; margin: auto;">⚠️ Erro de conexão com Omada</div>
+                    {% else %}
+                        {% for ssid in ssids %}
+                        <div class="ap-item">
+                            <span class="ap-name">
+                                <span class="ap-status {% if ssid.enabled %}online{% endif %}"></span>
+                                {{ ssid.name }}
+                            </span>
+                            {% if ssid.enabled %}
+                            <span class="ap-clients">{{ ssid.clients }} CLI</span>
+                            {% else %}
+                            <span class="ap-clients" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">OFF</span>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Nenhuma rede encontrada</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita: APs e Serviços -->
+        <div class="right-panel">
+            <!-- Serviços Locais (DNS no topo, outros abaixo) -->
+            <div class="card services-card">
+                <div class="card-title">Serviços Locais <span style="font-size: 7px;" id="services_count">Ativos: {{ dns_services|length|add:other_services|length }}</span></div>
+                <div class="services-grid" id="services_container">
+                    <!-- Servidores DNS -->
+                    {% for service in dns_services %}
+                    <div class="service-item" style="border: 1px solid rgba(56, 189, 248, 0.2); background: rgba(56, 189, 248, 0.03);">
+                        <div class="service-name" title="{{ service.target }}">{{ service.name }}
+                            {% for adg in adguards %}
+                                {% if "253" in adg.url and "253" in service.target %}
+                                <span style="font-size: 7px; color: #38bdf8;">({{ adg.blocked_percentage|floatformat:1 }}%)</span>
+                                {% elif "10.1" in adg.url or "localhost" in adg.url %}
+                                    {% if "10.1" in service.target %}
+                                    <span style="font-size: 7px; color: #38bdf8;">({{ adg.blocked_percentage|floatformat:1 }}%)</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="service-indicator {% if service.is_online %}online{% endif %}"></div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Linha divisória se houver ambos -->
+                    {% if dns_services and other_services %}
+                    <div style="grid-column: span 2; height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0;"></div>
+                    {% endif %}
+
+                    <!-- Outros Serviços -->
+                    {% for service in other_services %}
+                    <div class="service-item">
+                        <div class="service-name" title="{{ service.target }}">{{ service.name }}</div>
+                        <div class="service-indicator {% if service.is_online %}online{% endif %}"></div>
+                    </div>
+                    {% empty %}
+                        {% if not dns_services %}
+                        <div style="font-size: 8px; color: var(--text-secondary); grid-column: span 2; text-align: center; margin-top: 15px;">
+                            Nenhum serviço cadastrado.
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Rede Omada (Apenas Equipamentos de Rede) -->
+            <div class="card net-card">
+                <div class="card-title">Infraestrutura Local</div>
+                <div class="net-content">
+                    <div class="ap-list" id="ap_container">
+                        {% if not omada_cfg or not omada_cfg.enabled %}
+                            <div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Integração Omada desativada</div>
+                        {% elif not omada_cfg.is_connected %}
+                            <div class="error-msg" style="font-size: 8px; color: #f87171; text-align: center; width: 100%; margin: auto;">⚠️ Erro de conexão com Omada</div>
+                        {% else %}
+                            {% for dev in devices %}
+                            <div class="ap-item">
+                                <span class="ap-name">
+                                    <span class="ap-status {% if dev.status == 'Online' %}online{% endif %}"></span>
+                                    {{ dev.name }}
+                                </span>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    {% if dev.cpu_util > 0 %}
+                                    <span class="ap-clients" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">CPU: {{ dev.cpu_util }}%</span>
+                                    {% endif %}
+                                    {% if dev.temperature > 0 %}
+                                    <span class="ap-clients" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">{{ dev.temperature|floatformat:1 }}°C</span>
+                                    {% endif %}
+                                    {% if dev.model != 'ER7212PC' and dev.status == 'Online' %}
+                                    <span class="ap-clients">{{ dev.clients }} CLI</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Nenhum dispositivo encontrado</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript para atualização assíncrona -->
+    <script>
+        // Relógio no Topbar
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('pt-BR', { hour12: false });
+            document.getElementById('clock').textContent = timeString;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Trigger manual de Speedtest
+        function triggerSpeedtest() {
+            const btn = document.getElementById('btn_st');
+            if (btn.classList.contains('running')) return;
+            
+            btn.classList.add('running');
+            btn.textContent = "MEDINDO...";
+            
+            fetch('/api/trigger-speedtest/')
+                .then(res => res.json())
+                .then(data => {
+                    console.log("Speedtest solicitado:", data);
+                })
+                .catch(err => {
+                    console.error("Erro ao solicitar speedtest:", err);
+                    btn.classList.remove('running');
+                    btn.textContent = "TESTE";
+                });
+        }
+
+        // Atualização Periódica de Dados (a cada 4 segundos)
+        function updateStats() {
+            fetch('/api/status/')
+                .then(res => res.json())
+                .then(data => {
+                    // 1. Atualizar Hardware
+                    document.getElementById('cpu_temp').textContent = data.system.cpu_temp;
+                    document.getElementById('ram_usage').textContent = data.system.ram_usage;
+                    
+                    // 2. Atualizar WAN Status
+                    const wanDot = document.getElementById('wan_dot');
+                    const wanLabel = document.getElementById('wan_label');
+                    if (data.wan.wan_online) {
+                        wanDot.classList.add('online');
+                        wanLabel.textContent = "ONLINE";
+                    } else {
+                        wanDot.classList.remove('online');
+                        wanLabel.textContent = "OFFLINE";
+                    }
+                    document.getElementById('wan_latency').textContent = data.wan.latency_wan_ms.toFixed(1);
+                    document.getElementById('wan_rx_rate').textContent = data.wan.download_rate_mbps.toFixed(1);
+                    document.getElementById('wan_tx_rate').textContent = data.wan.upload_rate_mbps.toFixed(1);
+
+                    // 3. Atualizar Speedtest
+                    document.getElementById('speed_dl').textContent = data.speedtest.download.toFixed(1);
+                    document.getElementById('speed_ul').textContent = data.speedtest.upload.toFixed(1);
+                    document.getElementById('speed_time').textContent = data.speedtest.time;
+                    
+                    const btn = document.getElementById('btn_st');
+                    if (data.system.is_speedtesting) {
+                        btn.classList.add('running');
+                        btn.textContent = "MEDINDO...";
+                    } else {
+                        btn.classList.remove('running');
+                        btn.textContent = "TESTE";
+                    }
+
+                    // 4. Atualizar Redes Wi-Fi (SSIDs)
+                    const wifiContainer = document.getElementById('wifi_container');
+                    if (!data.omada.enabled) {
+                        wifiContainer.innerHTML = `<div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Integração Omada desativada</div>`;
+                    } else if (!data.omada.connected) {
+                        wifiContainer.innerHTML = `<div class="error-msg" style="font-size: 8px; color: #f87171; text-align: center; width: 100%; margin: auto;">⚠️ Erro de conexão com Omada</div>`;
+                    } else if (data.ssids && data.ssids.length > 0) {
+                        let html = '';
+                        data.ssids.forEach(ssid => {
+                            const onlineClass = ssid.enabled ? 'online' : '';
+                            const cliHtml = ssid.enabled ? `<span class="ap-clients">${ssid.clients} CLI</span>` : '<span class="ap-clients" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">OFF</span>';
+                            html += `
+                                <div class="ap-item">
+                                    <span class="ap-name">
+                                        <span class="ap-status ${onlineClass}"></span>
+                                        ${ssid.name}
+                                    </span>
+                                    ${cliHtml}
+                                </div>
+                            `;
+                        });
+                        wifiContainer.innerHTML = html;
+                    } else {
+                        wifiContainer.innerHTML = `<div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Nenhuma rede encontrada</div>`;
+                    }
+
+                    // 5. Atualizar Lista de Serviços (DNS no topo com separador e % do AdGuard)
+                    const servicesContainer = document.getElementById('services_container');
+                    const servicesCount = document.getElementById('services_count');
+                    const totalServices = data.dns_services.length + data.other_services.length;
+                    servicesCount.textContent = "Ativos: " + totalServices;
+                    
+                    if (totalServices === 0) {
+                        servicesContainer.innerHTML = `<div style="font-size: 8px; color: var(--text-secondary); grid-column: span 2; text-align: center; margin-top: 15px;">Nenhum serviço cadastrado.</div>`;
+                    } else {
+                        let html = '';
+                        
+                        // Renderiza DNS primeiro
+                        data.dns_services.forEach(s => {
+                            const onlineClass = s.is_online ? 'online' : '';
+                            let adgInfo = '';
+                            if (data.adguards.length > 0) {
+                                data.adguards.forEach(adg => {
+                                    if (s.name.includes("AdGuard") || s.target.includes("253") && adg.url.includes("253")) {
+                                        adgInfo = ` <span style="font-size: 7px; color: #38bdf8;">(${adg.blocked_percentage.toFixed(1)}%)</span>`;
+                                    } else if (s.target.includes("10.1") && (adg.url.includes("10.1") || adg.url.includes("localhost"))) {
+                                        adgInfo = ` <span style="font-size: 7px; color: #38bdf8;">(${adg.blocked_percentage.toFixed(1)}%)</span>`;
+                                    }
+                                });
+                            }
+                            html += `
+                                <div class="service-item" style="border: 1px solid rgba(56, 189, 248, 0.2); background: rgba(56, 189, 248, 0.03);">
+                                    <div class="service-name" title="${s.target}">${s.name}${adgInfo}</div>
+                                    <div class="service-indicator ${onlineClass}"></div>
+                                </div>
+                            `;
+                        });
+                        
+                        // Linha divisória
+                        if (data.dns_services.length > 0 && data.other_services.length > 0) {
+                            html += `<div style="grid-column: span 2; height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0;"></div>`;
+                        }
+                        
+                        // Renderiza outros serviços
+                        data.other_services.forEach(s => {
+                            const onlineClass = s.is_online ? 'online' : '';
+                            html += `
+                                <div class="service-item">
+                                    <div class="service-name" title="${s.target}">${s.name}</div>
+                                    <div class="service-indicator ${onlineClass}"></div>
+                                </div>
+                            `;
+                        });
+                        
+                        servicesContainer.innerHTML = html;
+                    }
+
+                    // 6. Atualizar Equipamentos Omada
+                    const apContainer = document.getElementById('ap_container');
+                    if (!data.omada.enabled) {
+                        apContainer.innerHTML = `<div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Integração Omada desativada</div>`;
+                    } else if (!data.omada.connected) {
+                        apContainer.innerHTML = `<div class="error-msg" style="font-size: 8px; color: #f87171; text-align: center; width: 100%; margin: auto;">⚠️ Erro de conexão com Omada</div>`;
+                    } else if (data.devices.length > 0) {
+                        let html = '';
+                        data.devices.forEach(dev => {
+                            const onlineClass = dev.status === 'Online' ? 'online' : '';
+                            
+                            let statsHtml = '<div style="display: flex; gap: 4px; align-items: center;">';
+                            if (dev.cpu_util > 0) {
+                                statsHtml += `<span class="ap-clients" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">CPU: ${dev.cpu_util}%</span>`;
+                            }
+                            if (dev.temperature > 0) {
+                                statsHtml += `<span class="ap-clients" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">${dev.temperature.toFixed(1)}°C</span>`;
+                            }
+                            if (dev.status === 'Online' && !dev.model.includes('ER7212')) {
+                                statsHtml += `<span class="ap-clients">${dev.clients} CLI</span>`;
+                            }
+                            statsHtml += '</div>';
+
+                            html += `
+                                <div class="ap-item">
+                                    <span class="ap-name">
+                                        <span class="ap-status ${onlineClass}"></span>
+                                        ${dev.name}
+                                    </span>
+                                    ${statsHtml}
+                                </div>
+                            `;
+                        });
+                        apContainer.innerHTML = html;
+                    } else {
+                        apContainer.innerHTML = `<div class="error-msg" style="font-size: 8px; color: var(--text-secondary); text-align: center; width: 100%; margin: auto;">Nenhum dispositivo encontrado</div>`;
+                    }
+                })
+                .catch(err => console.error("Erro ao buscar estatísticas da API:", err));
+        }
+
+        // Polling de 4 segundos
+        setInterval(updateStats, 4000);
+    </script>
+</body>
+</html>

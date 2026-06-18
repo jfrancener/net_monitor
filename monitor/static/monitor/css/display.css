@@ -1,0 +1,468 @@
+:root {
+    --bg-color: #08090d;
+    --card-bg: rgba(20, 22, 33, 0.7);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --green: #00f0ff; /* Ciano Elétrico */
+    --green-glow: rgba(0, 240, 255, 0.3);
+    --green-solid: #10b981; /* Esmeralda para OK */
+    --green-solid-glow: rgba(16, 185, 129, 0.3);
+    --red: #f43f5e; /* Carmesim */
+    --red-glow: rgba(244, 63, 94, 0.3);
+    --blue-gradient: linear-gradient(135deg, #3b82f6, #06b6d4);
+    --purple-gradient: linear-gradient(135deg, #8b5cf6, #ec4899);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    overflow: hidden;
+    width: 480px;
+    height: 320px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Top Bar */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 24px;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 4px;
+}
+
+.brand {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.sys-info {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.sys-item span {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr;
+    gap: 8px;
+    flex-grow: 1;
+    margin-top: 6px;
+    height: calc(100% - 30px);
+}
+
+/* Cards */
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: transparent;
+}
+
+.card-title {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* WAN, Speedtest & Wifi Col */
+.wan-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+}
+
+.wan-card::before {
+    background: var(--blue-gradient);
+}
+
+.wifi-card::before {
+    background: linear-gradient(135deg, #f59e0b, #eab308);
+}
+
+/* Card WAN Combinado */
+.combined-wan-card {
+    height: 122px; /* Reduzido de 140px para evitar overflow de todo o grid e dar espaço ao Wifi card */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px 8px;
+}
+
+.wan-realtime-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 32px;
+}
+
+.wan-status-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--red);
+    box-shadow: 0 0 6px var(--red-glow);
+    transition: all 0.5s ease;
+}
+
+.status-dot.online {
+    background-color: var(--green-solid);
+    box-shadow: 0 0 6px var(--green-solid-glow);
+}
+
+.wan-label {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+}
+
+.wan-latency {
+    font-size: 8px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+}
+
+.wan-bandwidth-wrapper {
+    display: flex;
+    gap: 10px;
+}
+
+.bw-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.bw-num {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.5px;
+}
+
+.bw-num.dl { color: #00f0ff; }
+.bw-num.ul { color: #a78bfa; }
+
+.bw-unit {
+    font-size: 6px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-left: 1px;
+}
+
+.bw-label {
+    font-size: 6px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* Divisor sutil */
+.card-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 2px 0;
+}
+
+/* Seção de Speedtest integrada */
+.wan-speedtest-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.speedtest-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.speedtest-title {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #f472b6;
+}
+
+.speedtest-time {
+    font-size: 7px;
+    color: var(--text-secondary);
+}
+
+.wan-speedtest-section .speed-values {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2px;
+}
+
+.wan-speedtest-section .speed-val {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.wan-speedtest-section .speed-num {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.5px;
+}
+
+.wan-speedtest-section .speed-num.dl { color: #60a5fa; }
+.wan-speedtest-section .speed-num.ul { color: #f472b6; }
+
+.wan-speedtest-section .speed-unit {
+    font-size: 6px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-left: 1px;
+}
+
+.wan-speedtest-section .speed-label {
+    font-size: 6px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.btn-speedtest {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 7px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    width: auto;
+    min-width: 44px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-speedtest:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.97);
+}
+
+.btn-speedtest.running {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6);
+    border: none;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+
+/* Right Panel: APs & Services */
+.right-panel {
+    display: grid;
+    grid-template-rows: 1.2fr 1fr;
+    gap: 8px;
+}
+
+.services-card::before {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    margin-top: 4px;
+    max-height: 85px;
+    overflow: hidden;
+}
+
+.service-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.service-name {
+    font-size: 9px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 85px;
+}
+
+.service-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--red);
+}
+
+.service-indicator.online {
+    background-color: var(--green-solid);
+    box-shadow: 0 0 4px var(--green-solid-glow);
+}
+
+/* Omada & DNS Row */
+.net-card::before {
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.net-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    height: 100%;
+    margin-top: 2px;
+}
+
+.dns-section {
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+
+.dns-title {
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.dns-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    margin: 2px 0;
+}
+
+.dns-ip {
+    font-weight: 600;
+}
+
+.dns-stats {
+    font-size: 7px;
+    color: var(--text-secondary);
+}
+
+.dns-stats span {
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+.ap-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    padding-left: 2px;
+}
+
+.ap-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    margin: 1px 0;
+}
+
+.ap-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+
+.ap-clients {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 7px;
+    font-weight: 700;
+    color: #38bdf8;
+}
+
+.ap-status {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--red);
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.ap-status.online {
+    background-color: var(--green-solid);
+}
