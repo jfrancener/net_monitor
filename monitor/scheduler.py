@@ -560,6 +560,21 @@ def monitor_loop():
                         logger.info("Speedtest do Omada agendado com sucesso.")
                     else:
                         logger.warning("Falha ao agendar Speedtest do Omada. Tentará novamente no próximo ciclo.")
+
+            # Verifica e envia o relatório diário de speedtest se estiver ativado e for o horário
+            try:
+                from monitor.models import SystemConfig
+                config, _ = SystemConfig.objects.get_or_create(id=1)
+                if config.speedtest_report_enabled and config.speedtest_report_time:
+                    report_time = config.speedtest_report_time
+                    if now_local.hour == report_time.hour and now_local.minute == report_time.minute:
+                        if config.last_report_sent_date != now_local.date():
+                            logger.info(f"Disparando relatório diário de speedtest para o Telegram às {report_time.strftime('%H:%M')}...")
+                            threading.Thread(target=generate_and_send_speedtest_report, daemon=True).start()
+                            config.last_report_sent_date = now_local.date()
+                            config.save()
+            except Exception as re_err:
+                logger.error(f"Erro ao verificar envio de relatório de speedtest agendado: {re_err}")
                 
         except Exception as e:
             logger.error(f"Erro no loop de monitoramento: {e}", exc_info=True)
@@ -713,3 +728,74 @@ def trigger_omada_speedtest_now():
                             logger.info(f"Status is_speedtesting ativado em: {speedtest_start_time}")
                         return success
     return False
+
+
+def generate_and_send_speedtest_report():
+    """Calcula estatísticas das últimas 24 horas de speedtest e envia um relatório para o Telegram."""
+    from monitor.models import SpeedTestResult
+    from monitor.telegram import send_telegram_message
+    from django.db.models import Min, Max, Avg
+    from django.utils import timezone
+    import datetime
+
+    # Período de 24 horas
+    periodo_inicio = timezone.now() - datetime.timedelta(hours=24)
+    medicoes = SpeedTestResult.objects.filter(timestamp__gte=periodo_inicio).order_by('-timestamp')
+    
+    qtd = medicoes.count()
+    if qtd == 0:
+        message = (
+            "📊 <b>Relatório de Speedtest (Últimas 24h)</b>\n\n"
+            "Nenhuma medição de velocidade registrada nas últimas 24 horas."
+        )
+        send_telegram_message(message)
+        return False
+        
+    ultima = medicoes.first() # a mais recente devido ao order_by('-timestamp')
+    
+    agregados = medicoes.aggregate(
+        min_dl=Min('download_mbps'),
+        max_dl=Max('download_mbps'),
+        avg_dl=Avg('download_mbps'),
+        min_ul=Min('upload_mbps'),
+        max_ul=Max('upload_mbps'),
+        avg_ul=Avg('upload_mbps'),
+        min_ping=Min('ping_ms'),
+        max_ping=Max('ping_ms'),
+        avg_ping=Avg('ping_ms')
+    )
+    
+    # Formatação das médias e agregações com tratamento para None
+    min_dl = agregados['min_dl'] or 0.0
+    max_dl = agregados['max_dl'] or 0.0
+    avg_dl = agregados['avg_dl'] or 0.0
+    min_ul = agregados['min_ul'] or 0.0
+    max_ul = agregados['max_ul'] or 0.0
+    avg_ul = agregados['avg_ul'] or 0.0
+    min_ping = agregados['min_ping'] or 0.0
+    max_ping = agregados['max_ping'] or 0.0
+    avg_ping = agregados['avg_ping'] or 0.0
+
+    message = (
+        f"📊 <b>Relatório de Speedtest (Últimas 24h)</b>\n\n"
+        f"🔌 <b>Última medição:</b>\n"
+        f"• Download: <code>{ultima.download_mbps:.1f} Mbps</code>\n"
+        f"• Upload: <code>{ultima.upload_mbps:.1f} Mbps</code>\n"
+        f"• Ping: <code>{ultima.ping_ms:.1f} ms</code>\n"
+        f"• Horário: <code>{timezone.localtime(ultima.timestamp).strftime('%d/%m/%Y %H:%M')}</code>\n\n"
+        f"🔺 <b>Maior medição no período:</b>\n"
+        f"• Download: <code>{max_dl:.1f} Mbps</code>\n"
+        f"• Upload: <code>{max_ul:.1f} Mbps</code>\n"
+        f"• Ping: <code>{max_ping:.1f} ms</code>\n\n"
+        f"🔻 <b>Menor medição no período:</b>\n"
+        f"• Download: <code>{min_dl:.1f} Mbps</code>\n"
+        f"• Upload: <code>{min_ul:.1f} Mbps</code>\n"
+        f"• Ping: <code>{min_ping:.1f} ms</code>\n\n"
+        f"📈 <b>Média das medições:</b>\n"
+        f"• Download: <code>{avg_dl:.1f} Mbps</code>\n"
+        f"• Upload: <code>{avg_ul:.1f} Mbps</code>\n"
+        f"• Ping: <code>{avg_ping:.1f} ms</code>\n\n"
+        f"🔢 <b>Quantidade de medições:</b> {qtd}"
+    )
+    
+    return send_telegram_message(message)

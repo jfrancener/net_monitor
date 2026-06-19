@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from .models import Service, AdGuardConfig, WANStatus, NetworkDevice, SpeedTestResult, WifiNetwork
+from .models import Service, AdGuardConfig, WANStatus, NetworkDevice, SpeedTestResult, WifiNetwork, SystemConfig
 from .scheduler import trigger_speedtest, is_speedtesting
 
 logger = logging.getLogger(__name__)
@@ -234,18 +234,39 @@ def dashboard_view(request):
                     pass
             return redirect('dashboard')
 
+        # 5. Salvar Configuração do Relatório Speedtest
+        elif action == "save_config":
+            enabled = request.POST.get("speedtest_report_enabled") == "on"
+            report_time = request.POST.get("speedtest_report_time", "08:00")
+            
+            config, _ = SystemConfig.objects.get_or_create(id=1)
+            config.speedtest_report_enabled = enabled
+            if report_time:
+                config.speedtest_report_time = report_time
+            config.save()
+            return redirect('dashboard')
+
+        # 6. Disparar Relatório Speedtest Manualmente
+        elif action == "send_speedtest_report":
+            from .scheduler import generate_and_send_speedtest_report
+            import threading
+            threading.Thread(target=generate_and_send_speedtest_report, daemon=True).start()
+            return redirect('dashboard')
+
     # Busca os dados para listar na tela
     services = Service.objects.all().order_by('name')
     adguards = AdGuardConfig.objects.all()
     speedtests = SpeedTestResult.objects.all()[:10]
     wan = WANStatus.objects.first()
+    system_config, _ = SystemConfig.objects.get_or_create(id=1)
 
     context = {
         'services': services,
         'adguards': adguards,
         'speedtests': speedtests,
         'wan': wan,
-        'is_speedtesting': is_speedtesting
+        'is_speedtesting': is_speedtesting,
+        'system_config': system_config
     }
     return render(request, 'monitor/dashboard.html', context)
 

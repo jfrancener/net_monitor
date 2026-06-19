@@ -121,3 +121,16 @@ class WANStatus(models.Model):
     def __str__(self):
         status_str = "Internet OK" if self.wan_online else "Internet Offline"
         return f"{status_str} (Latência: {self.latency_wan_ms:.1f}ms)"
+
+
+class SystemConfig(models.Model):
+    speedtest_report_enabled = models.BooleanField(default=False, verbose_name="Relatório Speedtest Ativo")
+    speedtest_report_time = models.TimeField(default="08:00", verbose_name="Horário do Relatório")
+    last_report_sent_date = models.DateField(null=True, blank=True, verbose_name="Última data em que o relatório foi enviado")
+
+    class Meta:
+        verbose_name = "Configuração do Sistema"
+        verbose_name_plural = "Configurações do Sistema"
+
+    def __str__(self):
+        return f"Configurações Gerais (Relatório: {'Ativo' if self.speedtest_report_enabled else 'Inativo'} às {self.speedtest_report_time})"

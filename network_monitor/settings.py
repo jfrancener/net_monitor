@@ -32,8 +32,7 @@ if env_path.exists():
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^1%2s52c)gwb)%apz=wfst*k((box82a@e9w*gc*3^e_hw78#g'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-^1%2s52c)gwb)%apz=wfst*k((box82a@e9w*gc*3^e_hw78#g')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

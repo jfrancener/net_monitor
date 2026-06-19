@@ -221,6 +221,36 @@
             </div>
         </div>
 
+        <!-- Relatório de Speedtest Telegram -->
+        <div class="section-card">
+            <div class="section-title">Relatório de Speedtest (Telegram)</div>
+            <form action="{% url 'dashboard' %}" method="POST" style="margin-bottom: 15px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_config">
+                
+                <div class="checkbox-group" style="margin-bottom: 15px;">
+                    <input type="checkbox" id="speedtest_report_enabled" name="speedtest_report_enabled" {% if system_config.speedtest_report_enabled %}checked{% endif %} onchange="toggleReportTimeField()">
+                    <label for="speedtest_report_enabled" style="cursor: pointer; font-weight: 500;">Habilitar relatório diário automático</label>
+                </div>
+                
+                <div class="form-group" id="report-time-group" style="margin-bottom: 15px; {% if not system_config.speedtest_report_enabled %}opacity: 0.5; pointer-events: none;{% endif %}">
+                    <label for="speedtest_report_time">Horário de Envio</label>
+                    <input type="time" id="speedtest_report_time" name="speedtest_report_time" value="{{ system_config.speedtest_report_time|time:'H:i' }}" style="max-width: 150px; background: rgba(255,255,255,0.03); color: var(--text); border: 1px solid rgba(255,255,255,0.08); padding: 8px; border-radius: 6px;">
+                </div>
+                
+                <button type="submit" class="btn btn-secondary" style="width: 100%;">💾 Salvar Configuração</button>
+            </form>
+            
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Deseja enviar o relatório de estatísticas das últimas 24 horas imediatamente?</div>
+                <form action="{% url 'dashboard' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="send_speedtest_report">
+                    <button type="submit" class="btn" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706);">⚡ Disparar Relatório Agora</button>
+                </form>
+            </div>
+        </div>
+
         <!-- Histórico de Speedtests -->
         <div class="section-card">
             <div class="section-title">Últimos Speedtests</div>
@@ -325,6 +355,18 @@
             const modal = document.getElementById('editModal');
             if (event.target === modal) {
                 closeEditModal();
+            }
+        }
+
+        function toggleReportTimeField() {
+            const checkbox = document.getElementById('speedtest_report_enabled');
+            const timeGroup = document.getElementById('report-time-group');
+            if (checkbox.checked) {
+                timeGroup.style.opacity = '1';
+                timeGroup.style.pointerEvents = 'auto';
+            } else {
+                timeGroup.style.opacity = '0.5';
+                timeGroup.style.pointerEvents = 'none';
             }
         }
 
