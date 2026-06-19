@@ -1,22 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-class OmadaConfig(models.Model):
-    url = models.CharField(max_length=255, default="https://192.168.10.1:8043", help_text="URL do Omada Controller")
-    username = models.CharField(max_length=100, default="admin")
-    password = models.CharField(max_length=100, default="senha")
-    site_name = models.CharField(max_length=100, default="Default")
-    enabled = models.BooleanField(default=False)
-    is_connected = models.BooleanField(default=False, help_text="Indica se a última sincronização com o Omada foi bem-sucedida")
-    last_updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Configuração Omada"
-        verbose_name_plural = "Configurações Omada"
-
-    def __str__(self):
-        return f"Omada Controller em {self.url}"
-
 
 class AdGuardConfig(models.Model):
     name = models.CharField(max_length=100, default="AdGuard Primary")
@@ -78,7 +62,7 @@ class SpeedTestResult(models.Model):
         verbose_name_plural = "Resultados Speedtest"
 
     def __str__(self):
-        return f"{self.timestamp.strftime('%d/%m/%Y %H:%M')} - DL: {self.download_mbps:.1f} Mbps | UL: {self.upload_mbps:.1f} Mbps"
+        return f"{timezone.localtime(self.timestamp).strftime('%d/%m/%Y %H:%M')} - DL: {self.download_mbps:.1f} Mbps | UL: {self.upload_mbps:.1f} Mbps"
 
 
 class NetworkDevice(models.Model):

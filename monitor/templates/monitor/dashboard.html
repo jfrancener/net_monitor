@@ -14,7 +14,7 @@
     <header>
         <div>
             <h1>Painel de Rede MKS Pi</h1>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Gerenciamento de serviços locais, DNS e controlador Omada.</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Gerenciamento de serviços locais e servidores DNS.</p>
         </div>
         <div class="header-links">
             <a href="{% url 'display' %}" target="_blank" class="btn btn-secondary">🖥️ Visualizar Display (TS35)</a>
@@ -23,229 +23,260 @@
     </header>
 
     <div class="main-container">
-        <!-- Coluna Esquerda: Cadastro de Serviços -->
-        <div>
-            <!-- Serviços Ativos -->
-            <div class="section-card">
-                <div class="section-title">
-                    <span>Serviços Monitorados</span>
+        <!-- Serviços Ativos -->
+        <div class="section-card">
+            <div class="section-title">
+                <span>Serviços Monitorados</span>
+            </div>
+            
+            <div class="service-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Tipo</th>
+                            <th>Destino</th>
+                            <th>Status</th>
+                            <th>Latência</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in services %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ s.name }}</td>
+                            <td><span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">{{ s.type }}</span></td>
+                            <td><code>{{ s.target }}{% if s.port %}:{{ s.port }}{% endif %}</code></td>
+                            <td>
+                                {% if s.enabled %}
+                                    {% if s.is_online %}
+                                    <span class="badge badge-online">● ONLINE</span>
+                                    {% else %}
+                                    <span class="badge badge-offline">● FORA DO AR</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">DESATIVADO</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-weight: 600;">{% if s.is_online %}{{ s.latency_ms }} ms{% else %}--{% endif %}</td>
+                            <td>
+                                <div class="action-column">
+                                    <button type="button" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="openEditModal({{ s.id }}, '{{ s.name|escapejs }}', '{{ s.type|escapejs }}', '{{ s.target|escapejs }}', '{{ s.port|default_if_none:'' }}')">Editar</button>
+                                    <form action="{% url 'toggle_service' s.id %}" method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; opacity: 0.8;">
+                                            {% if s.enabled %}Desativar{% else %}Ativar{% endif %}
+                                        </button>
+                                    </form>
+                                    <form action="{% url 'delete_service' s.id %}" method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Deseja mesmo excluir este serviço?')">Excluir</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px 0;">Nenhum serviço cadastrado para monitoramento.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Adicionar Novo Serviço -->
+        <div class="section-card">
+            <div class="section-title">Adicionar Serviço para Monitoramento</div>
+            <form action="{% url 'dashboard' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_service">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Nome do Serviço</label>
+                        <input type="text" id="name" name="name" placeholder="ex: Proxmox Web" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="type">Método de Teste</label>
+                        <select id="type" name="type" onchange="togglePortField()">
+                            <option value="ping">Ping (ICMP)</option>
+                            <option value="tcp">Porta TCP Aberta</option>
+                            <option value="http">Requisição HTTP (200 OK)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="target">IP / URL</label>
+                        <input type="text" id="target" name="target" placeholder="ex: 192.168.10.100 ou http://..." required>
+                    </div>
+                    <div class="form-group" id="port-group" style="display: none;">
+                        <label for="port">Porta TCP</label>
+                        <input type="number" id="port" name="port" placeholder="ex: 8006">
+                    </div>
                 </div>
                 
-                <div class="service-table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Serviço</th>
-                                <th>Tipo</th>
-                                <th>Destino</th>
-                                <th>Status</th>
-                                <th>Latência</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for s in services %}
-                            <tr>
-                                <td style="font-weight: 600;">{{ s.name }}</td>
-                                <td><span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">{{ s.type }}</span></td>
-                                <td><code>{{ s.target }}{% if s.port %}:{{ s.port }}{% endif %}</code></td>
-                                <td>
-                                    {% if s.enabled %}
-                                        {% if s.is_online %}
-                                        <span class="badge badge-online">● ONLINE</span>
-                                        {% else %}
-                                        <span class="badge badge-offline">● FORA DO AR</span>
-                                        {% endif %}
+                <button type="submit" class="btn" style="margin-top: 8px;">➕ Salvar Serviço</button>
+            </form>
+        </div>
+        
+        <!-- Configuração AdGuard Home -->
+        <div class="section-card">
+            <div class="section-title">Servidores DNS AdGuard</div>
+            
+            <!-- Tabela de Servidores Cadastrados -->
+            <div class="service-table-container" style="margin-bottom: 20px;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>URL da API</th>
+                            <th>Proteção</th>
+                            <th>Total Req.</th>
+                            <th>Bloqueios</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for adg in adguards %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ adg.name }}</td>
+                            <td><code>{{ adg.url }}</code></td>
+                            <td>
+                                {% if adg.enabled %}
+                                    {% if adg.is_active %}
+                                    <span class="badge badge-online">● ATIVA</span>
                                     {% else %}
-                                        <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">DESATIVADO</span>
+                                    <span class="badge badge-offline">● INATIVA</span>
                                     {% endif %}
-                                </td>
-                                <td style="font-weight: 600;">{% if s.is_online %}{{ s.latency_ms }} ms{% else %}--{% endif %}</td>
-                                <td>
-                                    <div class="action-column">
-                                        <form action="{% url 'toggle_service' s.id %}" method="POST" style="display:inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
-                                                {% if s.enabled %}Desativar{% else %}Ativar{% endif %}
-                                            </button>
-                                        </form>
-                                        <form action="{% url 'delete_service' s.id %}" method="POST" style="display:inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Deseja mesmo excluir este serviço?')">Excluir</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px 0;">Nenhum serviço cadastrado para monitoramento.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                                {% else %}
+                                    <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">DESATIVADO</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-weight: 600;">{{ adg.total_queries }}</td>
+                            <td>
+                                {% if adg.enabled %}
+                                <span style="color: #38bdf8; font-weight: 600;">{{ adg.blocked_queries }}</span> 
+                                <span style="font-size: 11px; color: var(--text-muted);">({{ adg.blocked_percentage|floatformat:1 }}%)</span>
+                                {% else %}
+                                --
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-column" style="display: flex; gap: 4px;">
+                                    <form action="{% url 'toggle_adguard' adg.id %}" method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;">
+                                            {% if adg.enabled %}Desativar{% else %}Ativar{% endif %}
+                                        </button>
+                                    </form>
+                                    <form action="{% url 'delete_adguard' adg.id %}" method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="return confirm('Deseja mesmo excluir este DNS?')">Excluir</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px 0;">Nenhum servidor AdGuard cadastrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
 
-            <!-- Adicionar Novo Serviço -->
-            <div class="section-card">
-                <div class="section-title">Adicionar Serviço para Monitoramento</div>
+            <!-- Formulário para Cadastrar/Adicionar DNS -->
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 15px;">
+                <div style="font-size: 12px; font-weight: 700; color: #3b82f6; margin-bottom: 12px; text-transform: uppercase;">➕ Cadastrar Novo Servidor DNS</div>
                 <form action="{% url 'dashboard' %}" method="POST">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="add_service">
+                    <input type="hidden" name="action" value="save_adguard">
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="name">Nome do Serviço</label>
-                            <input type="text" id="name" name="name" placeholder="ex: Proxmox Web" required>
+                            <label for="adg_name">Identificação do DNS</label>
+                            <input type="text" id="adg_name" name="name" placeholder="ex: AdGuard Secundário" required>
                         </div>
                         <div class="form-group">
-                            <label for="type">Método de Teste</label>
-                            <select id="type" name="type" onchange="togglePortField()">
-                                <option value="ping">Ping (ICMP)</option>
-                                <option value="tcp">Porta TCP Aberta</option>
-                                <option value="http">Requisição HTTP (200 OK)</option>
-                            </select>
+                            <label for="adg_url">URL da API</label>
+                            <input type="url" id="adg_url" name="url" placeholder="http://192.168.10.253" required>
                         </div>
                         <div class="form-group">
-                            <label for="target">IP / URL</label>
-                            <input type="text" id="target" name="target" placeholder="ex: 192.168.10.100 ou http://..." required>
+                            <label for="adg_username">Usuário</label>
+                            <input type="text" id="adg_username" name="username" placeholder="admin">
                         </div>
-                        <div class="form-group" id="port-group" style="display: none;">
-                            <label for="port">Porta TCP</label>
-                            <input type="number" id="port" name="port" placeholder="ex: 8006">
+                        <div class="form-group">
+                            <label for="adg_password">Senha</label>
+                            <input type="password" id="adg_password" name="password" placeholder="••••••••">
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn" style="margin-top: 8px;">➕ Salvar Serviço</button>
+                    <div class="checkbox-group" style="margin-top: 10px;">
+                        <input type="checkbox" id="adg_enabled" name="enabled" checked>
+                        <label for="adg_enabled" style="cursor: pointer;">Ativar este DNS</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-secondary" style="margin-top: 12px; width: 100%;">💾 Salvar Novo DNS</button>
                 </form>
             </div>
         </div>
 
-        <!-- Coluna Direita: Configurações de API e Speedtest logs -->
-        <div>
-            <!-- Configuração Omada -->
-            <div class="section-card">
-                <div class="section-title">Controlador Omada</div>
-                <form action="{% url 'dashboard' %}" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="save_omada">
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="omada_url">URL do Controlador (IP:Porta)</label>
-                        <input type="url" id="omada_url" name="url" value="{{ omada_cfg.url|default:'https://192.168.10.1:8043' }}" placeholder="https://192.168.10.1:8043" required>
+        <!-- Histórico de Speedtests -->
+        <div class="section-card">
+            <div class="section-title">Últimos Speedtests</div>
+            <div id="speedtest_list">
+                {% for st in speedtests %}
+                <div class="speedtest-log-item">
+                    <div style="font-weight: 500;">{{ st.timestamp|date:"d/m H:i" }}</div>
+                    <div class="speedtest-log-stats">
+                        <div>DL: <span class="st-log-val dl">{{ st.download_mbps|floatformat:1 }}</span> <span style="font-size: 10px; color: var(--text-muted);">Mb</span></div>
+                        <div>UL: <span class="st-log-val ul">{{ st.upload_mbps|floatformat:1 }}</span> <span style="font-size: 10px; color: var(--text-muted);">Mb</span></div>
                     </div>
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="omada_username">Usuário</label>
-                        <input type="text" id="omada_username" name="username" value="{{ omada_cfg.username|default:'admin' }}" required>
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="omada_password">Senha (Deixe em branco para manter)</label>
-                        <input type="password" id="omada_password" name="password" placeholder="••••••••">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="omada_site">Nome do Site</label>
-                        <input type="text" id="omada_site" name="site_name" value="{{ omada_cfg.site_name|default:'Default' }}" required>
-                    </div>
-
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="omada_enabled" name="enabled" {% if omada_cfg.enabled %}checked{% endif %}>
-                        <label for="omada_enabled" style="cursor: pointer;">Ativar Integração Omada</label>
-                    </div>
-
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 16px;">💾 Salvar Omada</button>
-                </form>
-            </div>
-
-            <!-- Configuração AdGuard Home -->
-            <div class="section-card">
-                <div class="section-title">AdGuard Home</div>
-                <!-- Exibe se já tem cadastrado -->
-                {% for adg in adguards %}
-                <form action="{% url 'dashboard' %}" method="POST" style="margin-bottom: 20px;">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="save_adguard">
-                    <input type="hidden" name="adguard_id" value="{{ adg.id }}">
-                    
-                    <div style="font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase;">{{ adg.name }}</div>
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label>URL da API</label>
-                        <input type="url" name="url" value="{{ adg.url }}" required>
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label>Usuário</label>
-                        <input type="text" name="username" value="{{ adg.username }}">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label>Senha</label>
-                        <input type="password" name="password" placeholder="••••••••">
-                    </div>
-
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="adg_enabled_{{ adg.id }}" name="enabled" {% if adg.enabled %}checked{% endif %}>
-                        <label for="adg_enabled_{{ adg.id }}" style="cursor: pointer;">Ativar este DNS</label>
-                    </div>
-
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 12px;">💾 Atualizar DNS</button>
-                </form>
+                </div>
                 {% empty %}
-                <!-- Formulário para Criar o Primeiro DNS -->
-                <form action="{% url 'dashboard' %}" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="save_adguard">
-                    
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="adg_name">Identificação do DNS</label>
-                        <input type="text" id="adg_name" name="name" value="AdGuard Primário" required>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="adg_url">URL da API</label>
-                        <input type="url" id="adg_url" name="url" placeholder="http://192.168.10.253:3000" required>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="adg_user">Usuário</label>
-                        <input type="text" id="adg_user" name="username" placeholder="admin">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="adg_pass">Senha</label>
-                        <input type="password" id="adg_pass" name="password" placeholder="••••••••">
-                    </div>
-
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="adg_new_enabled" name="enabled" checked>
-                        <label for="adg_new_enabled" style="cursor: pointer;">Ativar este DNS</label>
-                    </div>
-
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 16px;">➕ Adicionar AdGuard</button>
-                </form>
+                <div style="text-align: center; color: var(--text-muted); padding: 16px 0; font-size: 13px;">Nenhum teste de velocidade executado.</div>
                 {% endfor %}
             </div>
+        </div>
+    </div>
+    </div>
 
-            <!-- Histórico de Speedtests -->
-            <div class="section-card">
-                <div class="section-title">Últimos Speedtests</div>
-                <div id="speedtest_list">
-                    {% for st in speedtests %}
-                    <div class="speedtest-log-item">
-                        <div style="font-weight: 500;">{{ st.timestamp|date:"d/m H:i" }}</div>
-                        <div class="speedtest-log-stats">
-                            <div>DL: <span class="st-log-val dl">{{ st.download_mbps|floatformat:1 }}</span> <span style="font-size: 10px; color: var(--text-muted);">Mb</span></div>
-                            <div>UL: <span class="st-log-val ul">{{ st.upload_mbps|floatformat:1 }}</span> <span style="font-size: 10px; color: var(--text-muted);">Mb</span></div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div style="text-align: center; color: var(--text-muted); padding: 16px 0; font-size: 13px;">Nenhum teste de velocidade executado.</div>
-                    {% endfor %}
+    <!-- Modal de Edição de Serviço -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditModal()">&times;</span>
+            <h2 style="margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Editar Serviço</h2>
+            <form id="editForm" action="{% url 'dashboard' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_service">
+                <input type="hidden" name="service_id" id="edit_service_id">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_name">Nome do Serviço</label>
+                    <input type="text" id="edit_name" name="name" required>
                 </div>
-            </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_type">Método de Teste</label>
+                    <select id="edit_type" name="type" onchange="toggleEditPortField()">
+                        <option value="ping">Ping (ICMP)</option>
+                        <option value="tcp">Porta TCP Aberta</option>
+                        <option value="http">Requisição HTTP (200 OK)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_target">IP / URL</label>
+                    <input type="text" id="edit_target" name="target" required>
+                </div>
+                
+                <div class="form-group" id="edit-port-group" style="margin-bottom: 15px; display: none;">
+                    <label for="edit_port">Porta TCP</label>
+                    <input type="number" id="edit_port" name="port">
+                </div>
+                
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Salvar Alterações</button>
+            </form>
         </div>
     </div>
 
@@ -262,11 +293,46 @@
             }
         }
 
+        function toggleEditPortField() {
+            const typeSelect = document.getElementById('edit_type');
+            const portGroup = document.getElementById('edit-port-group');
+            if (typeSelect.value === 'tcp') {
+                portGroup.style.display = 'flex';
+                document.getElementById('edit_port').required = true;
+            } else {
+                portGroup.style.display = 'none';
+                document.getElementById('edit_port').required = false;
+            }
+        }
+
+        function openEditModal(id, name, type, target, port) {
+            document.getElementById('edit_service_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_type').value = type;
+            document.getElementById('edit_target').value = target;
+            document.getElementById('edit_port').value = port;
+            
+            toggleEditPortField();
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Fecha o modal ao clicar fora dele
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        }
+
         function triggerSpeedtest() {
             fetch('/api/trigger-speedtest/')
                 .then(res => res.json())
                 .then(data => {
-                    alert(data.success ? "Teste de velocidade iniciado em segundo plano! A página atualizará as informações assim que concluído." : "Um teste de velocidade já está em andamento.");
+                    alert(data.success ? "Teste de velocidade físico iniciado no roteador Omada! A página atualizará as informações assim que concluído." : (data.error || "Um teste de velocidade já está em andamento."));
                 })
                 .catch(err => alert("Erro ao solicitar speedtest: " + err));
         }

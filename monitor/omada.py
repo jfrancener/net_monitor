@@ -207,6 +207,30 @@ class OmadaClient:
             logger.error(f"Erro ao buscar SSIDs no Omada: {e}")
             return None
 
+    def get_clients(self):
+        """Retorna os clientes conectados ativos no site (necessário para contagem por SSID)"""
+        if not self.site_id:
+            self.get_site_id()
+            
+        if not self.site_id:
+            return None
+            
+        try:
+            url = f"{self.base_url}/{self.omadac_id}/api/v2/sites/{self.site_id}/clients?currentPage=1&currentPageSize=1000&filters.active=true" if self.omadac_id else f"{self.base_url}/api/v2/sites/{self.site_id}/clients?currentPage=1&currentPageSize=1000&filters.active=true"
+            response = self.session.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("errorCode") == 0:
+                    result = data.get("result", {})
+                    if isinstance(result, list):
+                        return result
+                    elif isinstance(result, dict):
+                        return result.get("data", [])
+            return None
+        except Exception as e:
+            logger.error(f"Erro ao buscar clientes no Omada: {e}")
+            return None
+
     def get_gateway_detail(self, gateway_mac):
         """Retorna os detalhes de um gateway específico (incluindo status de portas WAN)"""
         if not self.site_id:
@@ -283,6 +307,33 @@ class OmadaClient:
         except Exception as e:
             logger.error(f"Erro ao buscar histórico de speedtest do gateway no Omada: {e}")
             return None
+
+    def trigger_gateway_speedtest(self, gateway_mac, port_uuid):
+        """Dispara um novo teste de velocidade em tempo real no gateway do Omada."""
+        if not self.site_id:
+            self.get_site_id()
+            
+        if not self.site_id or not self.token or not self.omadac_id or not port_uuid:
+            return False
+            
+        try:
+            # Endpoint OpenAPI oficial do Omada para iniciar Speedtest
+            url = f"{self.base_url}/openapi/v1/{self.omadac_id}/sites/{self.site_id}/gateways/{gateway_mac}/speedTest"
+            payload = {
+                "portUuidList": [port_uuid]
+            }
+            response = self.session.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("errorCode") == 0:
+                    logger.info("Speedtest disparado com sucesso via API do Omada!")
+                    return True
+                else:
+                    logger.error(f"Erro do Omada ao solicitar Speedtest: {data.get('msg')}")
+            return False
+        except Exception as e:
+            logger.error(f"Falha de conexão ao solicitar Speedtest ao Omada: {e}")
+            return False
 
 
 def fetch_omada_status(config):

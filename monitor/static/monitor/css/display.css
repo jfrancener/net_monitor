@@ -62,21 +62,43 @@ body {
     font-size: 10px;
     color: var(--text-secondary);
     font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.sys-item {
+    font-variant-numeric: tabular-nums;
 }
 
 .sys-item span {
     color: var(--text-primary);
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+#clock {
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 58px;
+    text-align: right;
+    display: inline-block;
 }
 
 /* Dashboard Grid */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1.2fr 1.8fr;
+    grid-template-columns: 216px 1fr; /* Coluna esquerda (216px) e coluna direita (restante) */
     gap: 8px;
     flex-grow: 1;
     margin-top: 6px;
     height: calc(100% - 30px);
+}
+
+.left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
 }
 
 /* Cards */
@@ -114,25 +136,9 @@ body {
     align-items: center;
 }
 
-/* WAN, Speedtest & Wifi Col */
-.wan-col {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    height: 100%;
-}
-
-.wan-card::before {
-    background: var(--blue-gradient);
-}
-
-.wifi-card::before {
-    background: linear-gradient(135deg, #f59e0b, #eab308);
-}
-
 /* Card WAN Combinado */
 .combined-wan-card {
-    height: 122px; /* Reduzido de 140px para evitar overflow de todo o grid e dar espaço ao Wifi card */
+    height: 135px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -167,14 +173,14 @@ body {
 }
 
 .wan-label {
-    font-size: 13px;
+    font-size: 15px; /* Aumentado */
     font-weight: 800;
     letter-spacing: -0.5px;
     line-height: 1;
 }
 
 .wan-latency {
-    font-size: 8px;
+    font-size: 11px; /* Aumentado */
     color: var(--text-secondary);
     margin-top: 1px;
 }
@@ -190,8 +196,13 @@ body {
     align-items: flex-end;
 }
 
+.bw-val-row {
+    display: flex;
+    align-items: baseline;
+}
+
 .bw-num {
-    font-size: 13px;
+    font-size: 15px; /* Aumentado */
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.5px;
@@ -201,14 +212,14 @@ body {
 .bw-num.ul { color: #a78bfa; }
 
 .bw-unit {
-    font-size: 6px;
+    font-size: 7px; /* Aumentado */
     font-weight: 600;
     color: var(--text-secondary);
     margin-left: 1px;
 }
 
 .bw-label {
-    font-size: 6px;
+    font-size: 7px; /* Aumentado */
     color: var(--text-secondary);
     text-transform: uppercase;
     font-weight: 700;
@@ -235,7 +246,7 @@ body {
 }
 
 .speedtest-title {
-    font-size: 8px;
+    font-size: 9px; /* Aumentado */
     font-weight: 800;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -243,7 +254,7 @@ body {
 }
 
 .speedtest-time {
-    font-size: 7px;
+    font-size: 8px; /* Aumentado */
     color: var(--text-secondary);
 }
 
@@ -261,24 +272,24 @@ body {
 }
 
 .wan-speedtest-section .speed-num {
-    font-size: 13px;
+    font-size: 15px; /* Aumentado */
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.5px;
 }
 
-.wan-speedtest-section .speed-num.dl { color: #60a5fa; }
-.wan-speedtest-section .speed-num.ul { color: #f472b6; }
+.wan-speedtest-section .speed-num.dl { color: #00f0ff; } /* Corrigido para corresponder à banda consumida */
+.wan-speedtest-section .speed-num.ul { color: #a78bfa; } /* Corrigido para corresponder à banda consumida */
 
 .wan-speedtest-section .speed-unit {
-    font-size: 6px;
+    font-size: 7px; /* Aumentado */
     font-weight: 600;
     color: var(--text-secondary);
     margin-left: 1px;
 }
 
 .wan-speedtest-section .speed-label {
-    font-size: 6px;
+    font-size: 7px; /* Aumentado */
     color: var(--text-secondary);
     text-transform: uppercase;
     font-weight: 700;
@@ -288,7 +299,7 @@ body {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--text-primary);
-    font-size: 7px;
+    font-size: 9px; /* Aumentado */
     font-weight: 700;
     text-transform: uppercase;
     padding: 3px 6px;
@@ -297,8 +308,8 @@ body {
     transition: all 0.2s ease;
     text-align: center;
     width: auto;
-    min-width: 44px;
-    height: 16px;
+    min-width: 48px; /* Aumentado */
+    height: 18px; /* Aumentado */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -321,105 +332,62 @@ body {
     100% { opacity: 0.8; }
 }
 
-/* Right Panel: APs & Services */
-.right-panel {
-    display: grid;
-    grid-template-rows: 1.2fr 1fr;
-    gap: 8px;
-}
-
 .services-card::before {
     background: linear-gradient(90deg, #10b981, #059669);
 }
 
 .services-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 4px;
     margin-top: 4px;
-    max-height: 85px;
-    overflow: hidden;
+    height: calc(100% - 16px);
+    overflow-y: auto;
 }
 
-.service-item {
+.services-card .service-item.dns-item {
+    border-left: 2px solid #00f0ff;
+}
+
+.services-card .service-item {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 4px;
-    padding: 4px 6px;
-    display: flex;
+    padding: 5px 8px;
+    display: grid;
+    grid-template-columns: 1fr 60px 32px;
     align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    gap: 4px;
 }
 
-.service-name {
-    font-size: 9px;
-    font-weight: 500;
+.service-name-text {
+    font-size: 11px;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 85px;
+    color: var(--text-primary);
 }
 
-.service-indicator {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--red);
+.service-name-text.offline {
+    color: var(--red) !important;
 }
 
-.service-indicator.online {
-    background-color: var(--green-solid);
-    box-shadow: 0 0 4px var(--green-solid-glow);
+.service-meta {
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 }
 
-/* Omada & DNS Row */
+.service-latency {
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
 .net-card::before {
     background: linear-gradient(90deg, #f59e0b, #ef4444);
-}
-
-.net-content {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    height: 100%;
-    margin-top: 2px;
-}
-
-.dns-section {
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-    padding-right: 4px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-}
-
-.dns-title {
-    font-size: 8px;
-    font-weight: 700;
-    color: var(--text-secondary);
-}
-
-.dns-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 9px;
-    margin: 2px 0;
-}
-
-.dns-ip {
-    font-weight: 600;
-}
-
-.dns-stats {
-    font-size: 7px;
-    color: var(--text-secondary);
-}
-
-.dns-stats span {
-    color: #60a5fa;
-    font-weight: 600;
 }
 
 .ap-list {
@@ -427,6 +395,7 @@ body {
     flex-direction: column;
     justify-content: space-around;
     padding-left: 2px;
+    height: 100%;
 }
 
 .ap-item {
@@ -442,7 +411,14 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90px;
+}
+
+.infra-col:first-child .ap-name {
+    max-width: 52px; /* Espaço otimizado para coluna de 1/3 */
+}
+
+.infra-col:last-child .ap-name {
+    max-width: 90px; /* Espaço otimizado para coluna de 2/3 */
 }
 
 .ap-clients {
@@ -465,4 +441,109 @@ body {
 
 .ap-status.online {
     background-color: var(--green-solid);
+}
+
+/* Novo layout da DNS Card */
+.dns-card::before {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+}
+
+.dns-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px; /* Ajustado */
+    padding: 2px 0;
+    justify-content: flex-start; /* Alinhamento superior */
+    height: 100%;
+}
+
+.dns-service-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+
+.dns-service-name {
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.dns-service-status {
+    font-size: 7px;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(244, 63, 94, 0.15);
+    color: #f43f5e;
+}
+
+.dns-service-status.online {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.adg-blocked-percent {
+    font-size: 8px;
+    color: #38bdf8;
+    margin-left: 4px;
+    font-weight: 700;
+}
+
+/* Dual layout na Infraestrutura Local */
+.infra-dual-layout {
+    display: grid;
+    grid-template-columns: 1fr auto 2fr; /* Primeira coluna com 1/3 do espaço, segunda com 2/3 */
+    gap: 6px;
+    height: 100%;
+    align-items: stretch;
+}
+
+.infra-dual-layout .card-title {
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.infra-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    height: 100%;
+}
+
+.vertical-divider {
+    width: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    align-self: stretch;
+    margin: 2px 0;
+}
+
+/* Item simplificado de dispositivo */
+.simple-device-item {
+    justify-content: space-between;
+}
+
+.device-status-text {
+    font-size: 7px;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(244, 63, 94, 0.15);
+    color: #f43f5e;
+}
+
+.device-status-text.online {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.wifi-status-wrapper {
+    display: flex;
+    align-items: center;
 }

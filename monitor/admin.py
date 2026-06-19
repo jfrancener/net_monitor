@@ -1,9 +1,5 @@
 from django.contrib import admin
-from .models import OmadaConfig, AdGuardConfig, Service, SpeedTestResult, NetworkDevice, WANStatus, WifiNetwork
-
-@admin.register(OmadaConfig)
-class OmadaConfigAdmin(admin.ModelAdmin):
-    list_display = ('url', 'username', 'site_name', 'enabled', 'last_updated')
+from .models import AdGuardConfig, Service, SpeedTestResult, NetworkDevice, WANStatus, WifiNetwork
 
 @admin.register(AdGuardConfig)
 class AdGuardConfigAdmin(admin.ModelAdmin):

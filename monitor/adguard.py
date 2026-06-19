@@ -48,23 +48,11 @@ def fetch_adguard_status(config):
         except Exception as e:
             logger.error(f"Falha de conexão com o AdGuard Home em {config.url}: {e}")
             
-    # --- Dados Simulados (Mock) para Desenvolvimento ---
-    # Se for o AdGuard do IP 10.1 ou 10.253, retornamos estatísticas ligeiramente diferentes para ficar dinâmico
-    is_primary = "253" in (config.url if config else "")
-    
-    if is_primary:
-        return {
-            "total_queries": 34850,
-            "blocked_queries": 6273,
-            "blocked_percentage": 18.0,
-            "is_active": True,
-            "is_simulated": True
-        }
-    else:
-        return {
-            "total_queries": 15420,
-            "blocked_queries": 1230,
-            "blocked_percentage": 8.0,
-            "is_active": True,
-            "is_simulated": True
-        }
+    # Retorna inativo em caso de falha de conexão ou desabilitação
+    return {
+        "total_queries": 0,
+        "blocked_queries": 0,
+        "blocked_percentage": 0.0,
+        "is_active": False,
+        "is_simulated": False
+    }
